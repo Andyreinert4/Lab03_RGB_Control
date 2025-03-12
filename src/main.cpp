@@ -12,6 +12,7 @@
 // 12-MAR-2025 [A.Reinert] added RGB BLINK
 // 12-MAR-2025 [A.Reinert] added notes 
 // 12-MAR-2025 [A.Reinert] Final Commit
+// 12-MAR-2025 [A.Reinert] OLED display Status
 // *************************************************************************
 
 // Include Files
@@ -49,7 +50,7 @@ const uint8_t BOTTOM_Y = 48;          // Y position for the bottom line
 
 const uint8_t Roboto_Mono_14 []       // Font 1 for the OLED display
 {
-  0x0E, 0x0E, 0x0E, 0x0E, 0x0E, 0x00, 0x0E
+
 };
 
 String inputString = "";           // A string to hold incoming serial data
@@ -254,14 +255,14 @@ void processSerialCommand()
 // *************************************************************************
 void displayAllText()
 {
-  display.clear();                       // Clear the display
-  display.setFont(Roboto_Mono_14);       // Top line font
-  display.drawString(0, TOP_Y, topText); // Display the top line
-  display.setFont(Ultra_Regular_16);     // Middle line font
-  display.drawString(0, MIDDLE_Y, middleText);  // Display the middle line
-  display.setFont(Mountains_of_Christmas_Regular_12); // Bottom line font
-  display.drawString(0, BOTTOM_Y, bottomText);  // Display the bottom line
-  display.display();                     // Display the buffer
+  display.clear();
+  display.setFont(Roboto_Mono_14);
+  display.drawString(0, TOP_Y, "LED State: " + String(ledStateMode == OFF ? "OFF" : (ledStateMode == ON ? "ON" : "BLINK")));
+  display.setFont(Ultra_Regular_16);
+  display.drawString(0, MIDDLE_Y, "Color: " + String(currentColor == Red ? "Red" : currentColor == Green ? "Green" : currentColor == Blue ? "Blue" : currentColor == Yellow ? "Yellow" : currentColor == Cyan ? "Cyan" : currentColor == Purple ? "Purple" : "Orange"));
+  display.setFont(Mountains_of_Christmas_Regular_12);
+  display.drawString(0, BOTTOM_Y, "Brightness: " + String(brightness));
+  display.display();
 }
 
 // serialEvent
