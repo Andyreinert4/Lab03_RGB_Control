@@ -9,7 +9,8 @@
 // When         Who         Description of change
 // -----------  ----------- -----------------------
 // 12-MAR-2025  [A.Reinert] initial commit
-// 
+// 12-MAR-2025 [A.Reinert] added RGB BLINK
+//
 // *************************************************************************
 
 // Include Files
@@ -35,56 +36,51 @@ unsigned long ledBlinkTime = 0;        // Time for the next blink
 ADS1115 ADS(0x48);                     // Create an ADS1115 object with the default I2C address 0x48
 SSD1306Wire display(0x3c, SDA, SCL);   // OLED display
 
-enum Position { TOP, MIDDLE, BOTTOM, UNKNOWN };  // Position enum
-const uint8_t TOP_Y = 0;               // Y position for the top line
-const uint8_t MIDDLE_Y = 24;           // Y position for the middle line
-const uint8_t BOTTOM_Y = 48;           // Y position for the bottom line
+enum Position { TOP, MIDDLE, BOTTOM, UNKNOWN };
+const uint8_t TOP_Y = 0;
+const uint8_t MIDDLE_Y = 24;
+const uint8_t BOTTOM_Y = 48;
 
-String inputString = "";               // A string to hold incoming serial data
-bool stringComplete = false;           // Whether the string is complete
-
-String topText = "Top Line";           // Text for the top line
-String middleText = "Middle Line";     // Text for the middle line
-String bottomText = "Bottom Line";     // Text for the bottom line
-
-// Define the number of LEDs and the data pin
-const uint8_t NUM_LEDS = 1;            // Number of LEDs
-const uint8_t DATA_PIN = 16;           // data pin for the LED
-CRGB leds[NUM_LEDS];                   // LED array
-
-// Define the colors
-enum Color                             // Enum for the colors
-{ Red, 
-  Green, 
-  Blue, 
-  Yellow, 
-  Cyan, 
-  Purple, 
-  Orange 
-}; 
-Color currentColor = Red;              // Current color
-
-//font 
-const uint8_t Roboto_Mono_14 [] 
+const uint8_t Roboto_Mono_14 []
 {
-  // font data goes here
+
 };
 
+String inputString = "";
+bool stringComplete = false;
+
+String topText = "Top Line";
+String middleText = "Middle Line";
+String bottomText = "Bottom Line";
+
+// Define the number of LEDs and the data pin
+const uint8_t NUM_LEDS = 1;
+const uint8_t DATA_PIN = 16;
+CRGB leds[NUM_LEDS];
+
+// Define the colors
+enum Color { Red, Green, Blue, Yellow, Cyan, Purple, Orange };
+Color currentColor = Red; 
+
+// Brightness control
+uint8_t brightness = 128; // Initial brightness level (0-255)
+bool increasing = true;   // Direction of brightness change
+
 // Push button
-const uint8_t BUTTON_PIN = 17;         // GPIO pin for the button
-enum LEDState { OFF, ON };             // Enum for the LED state
-LEDState ledStateMode = OFF;           // LED state mode
-unsigned long buttonDebounceTime = 0;  // Time for the next debounce
-const uint16_t DEBOUNCE_DELAY = 50;    // Debounce delay in milliseconds
+const uint8_t BUTTON_PIN = 17;
+enum LEDState { OFF, ON, BLINK };
+LEDState ledStateMode = OFF;
+unsigned long buttonDebounceTime = 0;
+const uint16_t DEBOUNCE_DELAY = 50;
 
 // Function Prototypes
 // *************************************************************************
-void updateLEDState();                 // Update the LED state
-CRGB getColorFromEnum(Color color);    // Get the color from the enum
-void displayAllText();                 // Display all text on the OLED display
-void processSerialCommand();           // Process the serial command
-void checkButtonState();               // Check the button state
-Position getPositionFromString(const String &posStr); // Get the position from the string
+void updateLEDState();
+CRGB getColorFromEnum(Color color);
+void displayAllText();
+void processSerialCommand();
+void checkButtonState();
+Position getPositionFromString(const String &posStr);
 
 // Setup Code
 // *************************************************************************
@@ -102,23 +98,23 @@ void setup()
   ADS.getValue();                // Read the initial value
 
   // OLED Display Setup
-  inputString.reserve(128);      // Reserve memory for the input string
-  display.init();                // Initialize the display
-  display.displayOn();           // Turn on the display 
-  display.clear();               // Clear the display
-  display.setTextAlignment(TEXT_ALIGN_LEFT); // Set the text alignment
-  display.display();             // Display the text
+  inputString.reserve(128);
+  display.init();
+  display.displayOn();
+  display.clear();
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.display();
 
   // RGB LED Setup
-  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS); // Initialize the LED strip
-  FastLED.show();                // Show the LED strip
+  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
+  FastLED.show();
 
   // Button Setup
-  pinMode(BUTTON_PIN, INPUT_PULLUP);   // Set the button pin as an input with a pull-up resistor
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
 
-  Serial.println("\nText Display Example");    // Print a message to the serial monitor
-  Serial.println("Enter commands like: top:Hello World");    // Print a message to the serial monitor
-  Serial.println("Valid positions are: top, middle, bottom");   // Print a message to the serial monitor
+  Serial.println("\nText Display Example");
+  Serial.println("Enter commands like: top:Hello World");
+  Serial.println("Valid positions are: top, middle, bottom");
 }
 
 // Main program
@@ -282,12 +278,12 @@ void checkButtonState()
     buttonDebounceTime = millis();
     if (buttonState == LOW)
     {
-      ledStateMode = static_cast<LEDState>((ledStateMode + 1) % 2);
+      ledStateMode = static_cast<LEDState>((ledStateMode + 1) % 3);
       if (ledStateMode == ON) {
         currentColor = static_cast<Color>((currentColor + 1) % 7); // Cycle through colors
       }
       Serial.print("LED State: ");
-      Serial.println(ledStateMode == OFF ? "OFF" : "ON");
+      Serial.println(ledStateMode == OFF ? "OFF" : (ledStateMode == ON ? "ON" : "BLINK"));
     }
     lastButtonState = buttonState;
   }
@@ -314,6 +310,9 @@ CRGB getColorFromEnum(Color color)
 // *************************************************************************
 void updateLEDState()
 {
+  static unsigned long previousMillis = 0;
+  unsigned long currentMillis = millis();
+
   switch (ledStateMode)
   {
     case OFF:
@@ -322,6 +321,12 @@ void updateLEDState()
     case ON:
       leds[0] = getColorFromEnum(currentColor);
       break;
+    case BLINK:
+      if (currentMillis - previousMillis >= BLINK_INTERVAL) {
+        previousMillis = currentMillis;
+        leds[0] = leds[0] == CRGB::Black ? getColorFromEnum(currentColor) : CRGB::Black;
+      }
+      break;
   }
-  FastLED.show();             // Show the LED strip
+  FastLED.show();
 }
