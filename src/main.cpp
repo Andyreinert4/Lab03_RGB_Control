@@ -10,7 +10,7 @@
 // -----------  ----------- -----------------------
 // 12-MAR-2025  [A.Reinert] initial commit
 // 12-MAR-2025 [A.Reinert] added RGB BLINK
-//
+// 12-MAR-2025 [A.Reinert] added notes 
 // *************************************************************************
 
 // Include Files
@@ -36,30 +36,43 @@ unsigned long ledBlinkTime = 0;        // Time for the next blink
 ADS1115 ADS(0x48);                     // Create an ADS1115 object with the default I2C address 0x48
 SSD1306Wire display(0x3c, SDA, SCL);   // OLED display
 
-enum Position { TOP, MIDDLE, BOTTOM, UNKNOWN };
-const uint8_t TOP_Y = 0;
-const uint8_t MIDDLE_Y = 24;
-const uint8_t BOTTOM_Y = 48;
+enum Position               // Text position on the OLED display         
+{ TOP, 
+  MIDDLE, 
+  BOTTOM, 
+  UNKNOWN 
+}; 
+const uint8_t TOP_Y = 0;              // Y position for the top line
+const uint8_t MIDDLE_Y = 24;          // Y position for the middle line
+const uint8_t BOTTOM_Y = 48;          // Y position for the bottom line
 
-const uint8_t Roboto_Mono_14 []
+const uint8_t Roboto_Mono_14 []       // Font 1 for the OLED display
 {
-
+  0x0E, 0x0E, 0x0E, 0x0E, 0x0E, 0x00, 0x0E
 };
 
-String inputString = "";
-bool stringComplete = false;
-
-String topText = "Top Line";
-String middleText = "Middle Line";
-String bottomText = "Bottom Line";
+String inputString = "";           // A string to hold incoming serial data
+bool stringComplete = false;       // Whether the string is complete
+ 
+String topText = "Top Line";        // Text for the top line
+String middleText = "Middle Line";  // Text for the middle line
+String bottomText = "Bottom Line";  // Text for the bottom line
 
 // Define the number of LEDs and the data pin
-const uint8_t NUM_LEDS = 1;
-const uint8_t DATA_PIN = 16;
-CRGB leds[NUM_LEDS];
+const uint8_t NUM_LEDS = 1;         // Number of LEDs
+const uint8_t DATA_PIN = 16;        // Data pin for the LED strip
+CRGB leds[NUM_LEDS];                // Define the LED strip
 
 // Define the colors
-enum Color { Red, Green, Blue, Yellow, Cyan, Purple, Orange };
+enum Color                          // Enum for the LED colors
+{ Red, 
+  Green, 
+  Blue, 
+  Yellow, 
+  Cyan, 
+  Purple, 
+  Orange 
+};
 Color currentColor = Red; 
 
 // Brightness control
@@ -67,20 +80,20 @@ uint8_t brightness = 128; // Initial brightness level (0-255)
 bool increasing = true;   // Direction of brightness change
 
 // Push button
-const uint8_t BUTTON_PIN = 17;
-enum LEDState { OFF, ON, BLINK };
-LEDState ledStateMode = OFF;
-unsigned long buttonDebounceTime = 0;
-const uint16_t DEBOUNCE_DELAY = 50;
+const uint8_t BUTTON_PIN = 17;    // GPIO pin for the push button
+enum LEDState { OFF, ON, BLINK };  // LED state modes
+LEDState ledStateMode = OFF;       // Initial LED state mode
+unsigned long buttonDebounceTime = 0;  // Time for the next button debounce
+const uint16_t DEBOUNCE_DELAY = 50;    // Debounce delay in milliseconds
 
 // Function Prototypes
 // *************************************************************************
-void updateLEDState();
-CRGB getColorFromEnum(Color color);
-void displayAllText();
-void processSerialCommand();
-void checkButtonState();
-Position getPositionFromString(const String &posStr);
+void updateLEDState();               // Update the LED state
+CRGB getColorFromEnum(Color color);  // Get the CRGB color from the enum
+void displayAllText();               // Display all text on the OLED display
+void processSerialCommand();         // Process the serial command
+void checkButtonState();             // Check the button state
+Position getPositionFromString(const String &posStr);  // Get the position from the string
 
 // Setup Code
 // *************************************************************************
@@ -98,21 +111,22 @@ void setup()
   ADS.getValue();                // Read the initial value
 
   // OLED Display Setup
-  inputString.reserve(128);
-  display.init();
-  display.displayOn();
-  display.clear();
-  display.setTextAlignment(TEXT_ALIGN_LEFT);
-  display.display();
+  inputString.reserve(128);      // Reserve memory for the input string
+  display.init();                // Initialize the OLED display
+  display.displayOn();           // Turn on the display
+  display.clear();               // Clear the display
+  display.setTextAlignment(TEXT_ALIGN_LEFT);  // Set text alignment
+  display.display();             // Display the cleared buffer
 
   // RGB LED Setup
-  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
-  FastLED.show();
+  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS); // Initialize LED
+  FastLED.show();                // Display the initial LED state
 
   // Button Setup
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  pinMode(BUTTON_PIN, INPUT_PULLUP); 
 
-  Serial.println("\nText Display Example");
+  // Print the initial message
+  Serial.println("\nText Display Example"); 
   Serial.println("Enter commands like: top:Hello World");
   Serial.println("Valid positions are: top, middle, bottom");
 }
@@ -143,13 +157,13 @@ void loop()
   // Process serial input
   if (stringComplete)
   {
-    processSerialCommand();
-    stringComplete = false;
-    inputString = "";
+    processSerialCommand();    // Process the serial command
+    stringComplete = false;    // Reset the flag
+    inputString = "";          // Clear the input string
   }
 
   // Check button state
-  checkButtonState();
+  checkButtonState();   
 
   // Update RGB LED state
   updateLEDState();
@@ -157,9 +171,9 @@ void loop()
 
 // Function Definitions
 // *************************************************************************
-Position getPositionFromString(const String &posStr)
+Position getPositionFromString(const String &posStr) // Get the position from the string
 {
-  if (posStr == "top")
+  if (posStr == "top")  
   {
     return TOP;
   }
@@ -179,11 +193,11 @@ Position getPositionFromString(const String &posStr)
 
 // processSerialCommand
 // *************************************************************************
-void processSerialCommand()
+void processSerialCommand() 
 {
-  inputString.trim();
-  int8_t colonIndex = inputString.indexOf(':');
-  if (colonIndex == -1)
+  inputString.trim();  // Remove leading and trailing whitespace
+  int8_t colonIndex = inputString.indexOf(':'); // Find the colon index
+  if (colonIndex == -1)                         // Check if colon is missing
   {
     Serial.println("Error: Missing Text. Use format: Position:Text or Color:ColorName");
     return;
@@ -239,14 +253,14 @@ void processSerialCommand()
 // *************************************************************************
 void displayAllText()
 {
-  display.clear();
-  display.setFont(Roboto_Mono_14);
-  display.drawString(0, TOP_Y, topText);
-  display.setFont(Ultra_Regular_16);
-  display.drawString(0, MIDDLE_Y, middleText);
-  display.setFont(Mountains_of_Christmas_Regular_12);
-  display.drawString(0, BOTTOM_Y, bottomText);
-  display.display();
+  display.clear();                       // Clear the display
+  display.setFont(Roboto_Mono_14);       // Top line font
+  display.drawString(0, TOP_Y, topText); // Display the top line
+  display.setFont(Ultra_Regular_16);     // Middle line font
+  display.drawString(0, MIDDLE_Y, middleText);  // Display the middle line
+  display.setFont(Mountains_of_Christmas_Regular_12); // Bottom line font
+  display.drawString(0, BOTTOM_Y, bottomText);  // Display the bottom line
+  display.display();                     // Display the buffer
 }
 
 // serialEvent
